@@ -1,0 +1,17 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Title";
+}
+
+<h1>Values</h1>
+@foreach(var value in Model.Values)
+{
+<ol>
+    <li>@value</li>
+</ol>
+}
+<form method="Post">
+    <input asp-for="Value"/>
+    <input type="submit" value="klik"/>
+</form>
