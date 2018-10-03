@@ -85,6 +85,7 @@ namespace FrontEnd.Pages
                     }
 
                     Values = await response.Content.ReadAsAsync<IEnumerable<string>>();
+                    Value = string.Empty;
                 }
             }
         }
