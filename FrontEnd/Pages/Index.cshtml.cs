@@ -89,6 +89,36 @@ namespace FrontEnd.Pages
                 }
             }
         }
+
+        public async Task OnPostRemove()
+        {
+            var partitions = await fabricClient.QueryManager.GetPartitionListAsync(backEndServiceUri);
+
+            foreach (var partition in partitions)
+            {
+                var proxyUrl =
+                    $"{proxyAddress}/api/Values?PartitionKey={((Int64RangePartitionInformation)partition.PartitionInformation).LowKey}&PartitionKind=Int64Range";
+
+                using (var response = await httpClient.PostAsJsonAsync(proxyUrl, Value))
+                {
+                    if (response.StatusCode != System.Net.HttpStatusCode.OK)
+                    {
+                        continue;
+                    }
+                }
+
+                using (var response = await httpClient.GetAsync(proxyUrl))
+                {
+                    if (response.StatusCode != System.Net.HttpStatusCode.OK)
+                    {
+                        continue;
+                    }
+
+                    Values = await response.Content.ReadAsAsync<IEnumerable<string>>();
+                    Value = string.Empty;
+                }
+            }
+        }
     }
 }
 

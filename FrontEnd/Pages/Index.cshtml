@@ -5,13 +5,16 @@
 }
 
 <h1>Values</h1>
-@foreach(var value in Model.Values)
-{
-<ol>
-    <li>@value</li>
-</ol>
-}
+<div>
+    @foreach (var value in Model.Values)
+    {
+    <form asp-page-handler="remove" method="Post">
+        <input asp-for="Value" value="@value" readonly/>
+        <button>remove</button>
+    </form>
+    }
+</div>
 <form method="Post">
-    <input asp-for="Value"/>
-    <input type="submit" value="klik"/>
+    <input asp-for="Value" />
+    <input type="submit" value="add" />
 </form>
