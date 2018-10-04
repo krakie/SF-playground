@@ -9,7 +9,7 @@
     @foreach (var value in Model.Values)
     {
     <form asp-page-handler="remove" method="Post">
-        <input asp-for="Value" value="@value" readonly/>
+        <input asp-for="Value" value="@value" readonly border="0"/>
         <button>remove</button>
     </form>
     }

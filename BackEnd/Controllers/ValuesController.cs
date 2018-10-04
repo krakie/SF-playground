@@ -22,7 +22,7 @@ namespace BackEnd.Controllers
 
         // GET api/values
         [HttpGet]
-        public async Task<IEnumerable<string>> Get()
+        public async Task<IEnumerable<string>> GetAsync()
         {
             var ct = new CancellationToken();
 
@@ -41,31 +41,30 @@ namespace BackEnd.Controllers
             }
         }
 
-        [HttpPost]
-        public async Task<IActionResult> Post([FromBody] string value)
+        [HttpPut("{value}")]
+        public async Task<IActionResult> PutAsync(string value)
         {
             var myDictionary = await stateManager.GetOrAddAsync<IReliableDictionary<string, string>>("items");
 
             using (var tx = stateManager.CreateTransaction())
             {
-                await myDictionary.AddAsync(tx, Guid.NewGuid().ToString(), value);
+                await myDictionary.AddOrUpdateAsync(tx, value, value, (k, v) => v);
                 await tx.CommitAsync();
             }
-
             return new OkResult();
         }
 
         // DELETE api/values/5
-        [HttpDelete("{name}")]
-        public async Task<IActionResult> Delete(string name)
+        [HttpDelete("{value}")]
+        public async Task<IActionResult> DeleteAsync(string value)
         {
-            var myDictionary = await stateManager.GetOrAddAsync<IReliableDictionary<string, string>>("counts");
+            var myDictionary = await stateManager.GetOrAddAsync<IReliableDictionary<string, string>>("items");
 
             using (var tx = stateManager.CreateTransaction())
             {
-                if (await myDictionary.ContainsKeyAsync(tx, name))
+                if (await myDictionary.ContainsKeyAsync(tx, value))
                 {
-                    await myDictionary.TryRemoveAsync(tx, name);
+                    await myDictionary.TryRemoveAsync(tx, value);
                     await tx.CommitAsync();
                     return new OkResult();
                 }
@@ -74,7 +73,6 @@ namespace BackEnd.Controllers
                     return new NotFoundResult();
                 }
             }
-
         }
     }
 }

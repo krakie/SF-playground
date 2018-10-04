@@ -37,7 +37,7 @@ namespace FrontEnd.Pages
         [BindProperty]
         public string Value { get; set; }
 
-        public async Task OnGet()
+        public async Task OnGetAsync()
         {
             var partitions = await fabricClient.QueryManager.GetPartitionListAsync(backEndServiceUri);
 
@@ -54,22 +54,21 @@ namespace FrontEnd.Pages
                     }
 
                     Values = await response.Content.ReadAsAsync<IEnumerable<string>>();
-
                 }
             }
 
         }
 
-        public async Task OnPost()
+        public async Task OnPostAsync()
         {
             var partitions = await fabricClient.QueryManager.GetPartitionListAsync(backEndServiceUri);
 
             foreach (var partition in partitions)
             {
                 var proxyUrl =
-                    $"{proxyAddress}/api/Values?PartitionKey={((Int64RangePartitionInformation)partition.PartitionInformation).LowKey}&PartitionKind=Int64Range";
+                    $"{proxyAddress}/api/Values/{Value}?PartitionKey={((Int64RangePartitionInformation)partition.PartitionInformation).LowKey}&PartitionKind=Int64Range";
 
-                using (var response = await httpClient.PostAsJsonAsync(proxyUrl, Value))
+                using (var response = await httpClient.PutAsJsonAsync(proxyUrl, Value))
                 {
                     if (response.StatusCode != System.Net.HttpStatusCode.OK)
                     {
@@ -77,29 +76,22 @@ namespace FrontEnd.Pages
                     }
                 }
 
-                using (var response = await httpClient.GetAsync(proxyUrl))
-                {
-                    if (response.StatusCode != System.Net.HttpStatusCode.OK)
-                    {
-                        continue;
-                    }
+                await OnGetAsync();
 
-                    Values = await response.Content.ReadAsAsync<IEnumerable<string>>();
-                    Value = string.Empty;
-                }
             }
         }
 
-        public async Task OnPostRemove()
+
+        public async Task OnPostRemoveAsync()
         {
             var partitions = await fabricClient.QueryManager.GetPartitionListAsync(backEndServiceUri);
 
             foreach (var partition in partitions)
             {
                 var proxyUrl =
-                    $"{proxyAddress}/api/Values?PartitionKey={((Int64RangePartitionInformation)partition.PartitionInformation).LowKey}&PartitionKind=Int64Range";
+                    $"{proxyAddress}/api/Values/{Value}?PartitionKey={((Int64RangePartitionInformation)partition.PartitionInformation).LowKey}&PartitionKind=Int64Range";
 
-                using (var response = await httpClient.PostAsJsonAsync(proxyUrl, Value))
+                using (var response = await httpClient.DeleteAsync(proxyUrl))
                 {
                     if (response.StatusCode != System.Net.HttpStatusCode.OK)
                     {
@@ -107,16 +99,8 @@ namespace FrontEnd.Pages
                     }
                 }
 
-                using (var response = await httpClient.GetAsync(proxyUrl))
-                {
-                    if (response.StatusCode != System.Net.HttpStatusCode.OK)
-                    {
-                        continue;
-                    }
+                await OnGetAsync();
 
-                    Values = await response.Content.ReadAsAsync<IEnumerable<string>>();
-                    Value = string.Empty;
-                }
             }
         }
     }
