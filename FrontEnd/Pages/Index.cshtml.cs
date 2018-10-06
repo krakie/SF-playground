@@ -56,10 +56,9 @@ namespace FrontEnd.Pages
                     Values = await response.Content.ReadAsAsync<IEnumerable<string>>();
                 }
             }
-
         }
 
-        public async Task OnPostAsync()
+        public async Task OnPostNextAsync()
         {
             var partitions = await fabricClient.QueryManager.GetPartitionListAsync(backEndServiceUri);
 
@@ -75,21 +74,19 @@ namespace FrontEnd.Pages
                         continue;
                     }
                 }
-
-                await OnGetAsync();
-
             }
+            await OnGetAsync();
         }
 
 
-        public async Task OnPostRemoveAsync()
+        public async Task OnPostBackAsync()
         {
             var partitions = await fabricClient.QueryManager.GetPartitionListAsync(backEndServiceUri);
 
             foreach (var partition in partitions)
             {
                 var proxyUrl =
-                    $"{proxyAddress}/api/Values/{Value}?PartitionKey={((Int64RangePartitionInformation)partition.PartitionInformation).LowKey}&PartitionKind=Int64Range";
+                    $"{proxyAddress}/api/Values?PartitionKey={((Int64RangePartitionInformation)partition.PartitionInformation).LowKey}&PartitionKind=Int64Range";
 
                 using (var response = await httpClient.DeleteAsync(proxyUrl))
                 {
@@ -98,10 +95,8 @@ namespace FrontEnd.Pages
                         continue;
                     }
                 }
-
-                await OnGetAsync();
-
             }
+            await OnGetAsync();
         }
     }
 }

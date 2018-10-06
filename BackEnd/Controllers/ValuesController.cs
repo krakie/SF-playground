@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -26,11 +25,11 @@ namespace BackEnd.Controllers
         {
             var ct = new CancellationToken();
 
-            var myDictionary = await stateManager.GetOrAddAsync<IReliableDictionary<string, string>>("items");
+            var answers = await stateManager.GetOrAddAsync<IReliableDictionary<long, string>>("answers");
 
             using (var tx = stateManager.CreateTransaction())
             {
-                var list = await myDictionary.CreateEnumerableAsync(tx);
+                var list = await answers.CreateEnumerableAsync(tx);
                 var enumerator = list.GetAsyncEnumerator();
                 var result = new List<string>();
                 while (await enumerator.MoveNextAsync(ct))
@@ -44,27 +43,30 @@ namespace BackEnd.Controllers
         [HttpPut("{value}")]
         public async Task<IActionResult> PutAsync(string value)
         {
-            var myDictionary = await stateManager.GetOrAddAsync<IReliableDictionary<string, string>>("items");
+            var answers = await stateManager.GetOrAddAsync<IReliableDictionary<long, string>>("answers");
 
             using (var tx = stateManager.CreateTransaction())
             {
-                await myDictionary.AddOrUpdateAsync(tx, value, value, (k, v) => v);
+                var count = await answers.GetCountAsync(tx);
+                await answers.AddOrUpdateAsync(tx, count, value, (k, v) => v);
                 await tx.CommitAsync();
             }
             return new OkResult();
         }
 
         // DELETE api/values/5
-        [HttpDelete("{value}")]
-        public async Task<IActionResult> DeleteAsync(string value)
+        [HttpDelete]
+        public async Task<IActionResult> DeleteAsync()
         {
-            var myDictionary = await stateManager.GetOrAddAsync<IReliableDictionary<string, string>>("items");
+            var answers = await stateManager.GetOrAddAsync<IReliableDictionary<long, string>>("answers");
 
             using (var tx = stateManager.CreateTransaction())
             {
-                if (await myDictionary.ContainsKeyAsync(tx, value))
+                var count = await answers.GetCountAsync(tx);
+
+                if (await answers.ContainsKeyAsync(tx, count - 1))
                 {
-                    await myDictionary.TryRemoveAsync(tx, value);
+                    await answers.TryRemoveAsync(tx, count - 1);
                     await tx.CommitAsync();
                     return new OkResult();
                 }
