@@ -4,7 +4,7 @@
     ViewData["Title"] = "Title";
 }
 
-<h1>Values</h1>
+<h1>Previous answers</h1>
 <ul>
     @foreach (var value in Model.Values)
     {
@@ -12,7 +12,7 @@
     }
 </ul>
 <form method="post">
-    answer: <input asp-for="Value" />
-    <button asp-page-handler="back">back</button>
+    answer: <input asp-for="Value" value="@Model.Value" />
     <button asp-page-handler="next">next</button>
+    <button asp-page-handler="back">back</button>
 </form>

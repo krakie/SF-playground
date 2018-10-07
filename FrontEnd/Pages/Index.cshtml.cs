@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Fabric;
-using System.Fabric.Query;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Linq;
 
 namespace FrontEnd.Pages
 {
@@ -39,64 +39,43 @@ namespace FrontEnd.Pages
 
         public async Task OnGetAsync()
         {
-            var partitions = await fabricClient.QueryManager.GetPartitionListAsync(backEndServiceUri);
-
-            foreach (Partition partition in partitions)
+            using (var response = await SendToBackEnd(async (url) => await httpClient.GetAsync(url), (part1, part2) => $"{part1}{part2}"))
             {
-                var proxyUrl =
-                    $"{proxyAddress}/api/Values?PartitionKey={((Int64RangePartitionInformation)partition.PartitionInformation).LowKey}&PartitionKind=Int64Range";
-
-                using (var response = await httpClient.GetAsync(proxyUrl))
-                {
-                    if (response.StatusCode != System.Net.HttpStatusCode.OK)
-                    {
-                        continue;
-                    }
-
-                    Values = await response.Content.ReadAsAsync<IEnumerable<string>>();
-                }
+                Values = await response.Content.ReadAsAsync<IEnumerable<string>>();
             }
         }
 
         public async Task OnPostNextAsync()
         {
-            var partitions = await fabricClient.QueryManager.GetPartitionListAsync(backEndServiceUri);
-
-            foreach (var partition in partitions)
-            {
-                var proxyUrl =
-                    $"{proxyAddress}/api/Values/{Value}?PartitionKey={((Int64RangePartitionInformation)partition.PartitionInformation).LowKey}&PartitionKind=Int64Range";
-
-                using (var response = await httpClient.PutAsJsonAsync(proxyUrl, Value))
-                {
-                    if (response.StatusCode != System.Net.HttpStatusCode.OK)
-                    {
-                        continue;
-                    }
-                }
-            }
+            await SendToBackEnd(async (url) => await httpClient.PutAsJsonAsync(url, Value), (part1, part2) => $"{part1}/{Value}{part2}");
             await OnGetAsync();
+            Value = string.Empty;
         }
 
 
         public async Task OnPostBackAsync()
         {
+            await OnGetAsync();
+            Value = Values.Last();
+            await SendToBackEnd(async (url) => await httpClient.DeleteAsync(url), (part1, part2) => $"{part1}{part2}");
+            await OnGetAsync();
+        }
+
+        private async Task<HttpResponseMessage> SendToBackEnd(Func<string, Task<HttpResponseMessage>> httpMethod, Func<string, string, string> buildProxyUrl)
+        {
             var partitions = await fabricClient.QueryManager.GetPartitionListAsync(backEndServiceUri);
 
             foreach (var partition in partitions)
             {
-                var proxyUrl =
-                    $"{proxyAddress}/api/Values?PartitionKey={((Int64RangePartitionInformation)partition.PartitionInformation).LowKey}&PartitionKind=Int64Range";
+                var proxyUrl = buildProxyUrl($"{proxyAddress}/api/Values", $"?PartitionKey={((Int64RangePartitionInformation)partition.PartitionInformation).LowKey}&PartitionKind=Int64Range");
 
-                using (var response = await httpClient.DeleteAsync(proxyUrl))
+                var response = await httpMethod(proxyUrl);
+                if (response.StatusCode == System.Net.HttpStatusCode.OK)
                 {
-                    if (response.StatusCode != System.Net.HttpStatusCode.OK)
-                    {
-                        continue;
-                    }
+                    return response;
                 }
             }
-            await OnGetAsync();
+            return new HttpResponseMessage { StatusCode = System.Net.HttpStatusCode.NotFound };
         }
     }
 }
